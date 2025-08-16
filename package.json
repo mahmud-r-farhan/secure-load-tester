@@ -1,0 +1,38 @@
+{
+    "name": "secure-load-tester",
+    "version": "1.0.0",
+    "description": "A CLI tool for performance and security testing of Node.js APIs, including JWT, CSRF, and session hijacking tests",
+    "main": "src/index.js",
+    "bin": {
+        "secure-load-tester": "bin/cli.js"
+    },
+    "files": [
+        "src/",
+        "bin/",
+        "config.json",
+        "README.md"
+    ],
+    "scripts": {
+        "start": "node bin/cli.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "load-testing",
+        "security-testing",
+        "api-testing",
+        "node.js",
+        "csrf",
+        "session-hijacking",
+        "jwt"
+    ],
+    "author": "Mahmud",
+    "license": "MIT",
+    "dependencies": {
+        "axios": "^1.7.2",
+        "commander": "^12.1.0",
+        "csv-writer": "^1.6.0",
+        "ejs": "^3.1.9",
+        "jsonwebtoken": "^9.0.2",
+        "uuid": "^10.0.0"
+    }
+}
