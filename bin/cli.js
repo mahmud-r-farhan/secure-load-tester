@@ -5,7 +5,7 @@ const { runTests } = require('../src/index');
 const fs = require('fs').promises;
 
 program
-    .version('1.2.0')
+    .version('2.0.0')
     .description('Secure Load Tester: A CLI tool for performance and security testing of Node.js APIs')
     .option('-u, --url <url>', 'Target API URL', 'http://localhost:5000/api/test')
     .option('-r, --requests <number>', 'Number of requests', '10')

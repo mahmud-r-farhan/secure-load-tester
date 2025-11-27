@@ -1,31 +1,12 @@
-import { sendRequest } from './request';
-import { Stats, TestResult } from './stats';
-import { saveLogs, saveJsonReport, saveHtmlReport } from './logger';
-import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
-import { promises as fs } from 'fs';
+const { sendRequest } = require('./request');
+const Stats = require('./stats');
+const { saveLogs, saveJsonReport, saveHtmlReport } = require('./logger');
+const { v4: uuidv4 } = require('uuid');
+const jwt = require('jsonwebtoken');
+const fs = require('fs').promises;
+const path = require('path');
 
-export interface Config {
-    targetUrl?: string;
-    maxRequests?: number;
-    delay?: number;
-    concurrent?: number;
-    authToken?: string;
-    sessionCookie?: string;
-    csrfToken?: string;
-    customPayloadsFile?: string;
-    method?: string;
-    timeout?: number;
-    outputDir?: string;
-}
-
-interface TestConfig {
-    type: string;
-    headers: Record<string, string>;
-    payload: { test_id: string; value: string };
-}
-
-export async function runTests(config: Config): Promise<void> {
+async function runTests(config) {
     const {
         targetUrl = 'http://localhost:5000/api/test',
         maxRequests = 10,
@@ -43,37 +24,25 @@ export async function runTests(config: Config): Promise<void> {
     console.log(`\n🚀 Sending ${maxRequests} request(s) to ${targetUrl} using ${method} with ${delay}s delay and ${concurrent} concurrent requests...`);
 
     // Default payloads
-    let payloads: Array<{ test_id: string; value: string }> = [
+    let payloads = [
         { test_id: `test_${uuidv4()}`, value: 'sample' },
-        // XSS
-        { test_id: `<script>alert('XSS')</script>`, value: 'malicious_xss_basic' },
-        { test_id: `<img src=x onerror=alert(1)>`, value: 'malicious_xss_img' },
-        { test_id: `javascript:alert(1)`, value: 'malicious_xss_js_scheme' },
-        // SQL Injection
-        { test_id: `1; DROP TABLE users; --`, value: 'sql_injection_drop' },
-        { test_id: `' OR '1'='1`, value: 'sql_injection_auth_bypass' },
-        { test_id: `admin' --`, value: 'sql_injection_comment' },
-        // Path Traversal
-        { test_id: `../../etc/passwd`, value: 'path_traversal_unix' },
-        { test_id: `..\\..\\windows\\win.ini`, value: 'path_traversal_win' },
-        // Command Injection
-        { test_id: `; ls -la`, value: 'command_injection_ls' },
-        { test_id: `| cat /etc/passwd`, value: 'command_injection_cat' }
+        { test_id: `<script>alert('XSS')</script>`, value: 'malicious' },
+        { test_id: `1; DROP TABLE users; --`, value: 'sql_injection' },
+        { test_id: `../../etc/passwd`, value: 'path_traversal' }
     ];
 
     // Load custom payloads if provided
     if (customPayloadsFile) {
         try {
-            const fileContent = await fs.readFile(customPayloadsFile, 'utf-8');
-            const customPayloads = JSON.parse(fileContent);
+            const customPayloads = JSON.parse(await fs.readFile(customPayloadsFile));
             payloads = payloads.concat(customPayloads);
-        } catch (error: any) {
+        } catch (error) {
             console.error(`Error loading custom payloads: ${error.message}`);
         }
     }
 
     // Headers configuration
-    const headers: Record<string, string> = {};
+    const headers = {};
     if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
     if (sessionCookie) headers['Cookie'] = sessionCookie;
 
@@ -81,15 +50,15 @@ export async function runTests(config: Config): Promise<void> {
     let manipulatedJwt = 'invalid_jwt_token';
     if (authToken) {
         try {
-            const decoded = jwt.decode(authToken) as any || {};
+            const decoded = jwt.decode(authToken) || {};
             manipulatedJwt = jwt.sign({ ...decoded, iat: Math.floor(Date.now() / 1000) - 3600 }, 'invalid-secret');
-        } catch (error: any) {
+        } catch (error) {
             console.warn(`Warning: Could not decode JWT for manipulation: ${error.message}`);
         }
     }
 
     // Test configurations
-    const testConfigs: TestConfig[] = [
+    const testConfigs = [
         { type: 'STANDARD', headers, payload: payloads[0] },
         { type: 'CSRF', headers: { ...headers, 'X-CSRF-Token': csrfToken || 'invalid_csrf_token' }, payload: payloads[0] },
         { type: 'CSRF', headers, payload: payloads[0] },
@@ -101,17 +70,15 @@ export async function runTests(config: Config): Promise<void> {
     ];
 
     const stats = new Stats();
-    const results: TestResult[] = [];
+    const results = [];
     const startTime = performance.now();
 
     // Run requests in batches
     for (let i = 1; i <= maxRequests; i += concurrent) {
-        const batch: Promise<TestResult>[] = [];
-        for (let j = 0; j < concurrent; j++) {
-            if (i + j <= maxRequests) {
-                const config = testConfigs[Math.floor(Math.random() * testConfigs.length)];
-                batch.push(sendRequest(i + j, targetUrl, method, config.headers, config.payload, timeout, config.type));
-            }
+        const batch = [];
+        for (let j = 0; j < concurrent && i + j <= maxRequests; j++) {
+            const config = testConfigs[Math.floor(Math.random() * testConfigs.length)];
+            batch.push(sendRequest(i + j, targetUrl, method, config.headers, config.payload, timeout, config.type));
         }
 
         const batchResults = await Promise.all(batch);
@@ -121,10 +88,7 @@ export async function runTests(config: Config): Promise<void> {
             console.log(`\r📊 Sent: ${stats.total}/${maxRequests} | ✅ Success: ${stats.success} | ❌ Error: ${stats.error} | ⏱ Avg Time: ${stats.getAverageTime().toFixed(3)}s`);
         });
 
-        // Only delay if there are more requests to send
-        if (i + concurrent <= maxRequests) {
-            await new Promise(resolve => setTimeout(resolve, delay * 1000));
-        }
+        await new Promise(resolve => setTimeout(resolve, delay * 1000));
     }
 
     const csvFile = await saveLogs(results, outputDir);
@@ -134,11 +98,16 @@ export async function runTests(config: Config): Promise<void> {
 
     console.log('\n📈 Test Summary:');
     console.log(`⏳ Total time: ${elapsedTotal}s`);
-    console.log(`⚡ Avg RPS: ${(maxRequests / parseFloat(elapsedTotal)).toFixed(2)}`);
+    console.log(`⚡ Avg RPS: ${(maxRequests / elapsedTotal).toFixed(2)}`);
     console.log(`✅ Successful requests: ${stats.success}`);
     console.log(`❌ Failed requests: ${stats.error}`);
     console.log(`🔒 CSRF test failures: ${stats.csrfFailures} (If low, CSRF protection may be effective)`);
     console.log(`🔓 Session Hijacking test failures: ${stats.sessionHijackFailures} (If low, session validation may be effective)`);
     console.log(`🔐 JWT test failures: ${stats.jwtFailures} (If low, JWT validation may be effective)`);
-    console.log(`📁 Logs saved to '${csvFile}', '${jsonFile}', and '${htmlFile}'`);
+    console.log('\n📁 Report files locations:');
+    console.log(`CSV: ${path.resolve(csvFile)}`);
+    console.log(`JSON: ${path.resolve(jsonFile)}`);
+    console.log(`HTML: ${path.resolve(htmlFile)}`);
 }
+
+module.exports = { runTests };

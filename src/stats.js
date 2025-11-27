@@ -1,33 +1,4 @@
-export interface TestResult {
-    id: number;
-    method: string;
-    status: number | 'ERROR';
-    responseTime: number;
-    error: string | null;
-    response: string;
-    sensitiveLeak: string;
-    testType: string;
-}
-
-export interface StatsSummary {
-    total: number;
-    success: number;
-    error: number;
-    avgTime: string;
-    csrfFailures: number;
-    sessionHijackFailures: number;
-    jwtFailures: number;
-}
-
-export class Stats {
-    total: number;
-    success: number;
-    error: number;
-    totalTime: number;
-    csrfFailures: number;
-    sessionHijackFailures: number;
-    jwtFailures: number;
-
+class Stats {
     constructor() {
         this.total = 0;
         this.success = 0;
@@ -38,9 +9,9 @@ export class Stats {
         this.jwtFailures = 0;
     }
 
-    update(result: TestResult): void {
+    update(result) {
         this.total += 1;
-        if (result.status !== 'ERROR' && typeof result.status === 'number' && result.status >= 200 && result.status < 400) {
+        if (result.status !== 'ERROR' && result.status >= 200 && result.status < 400) {
             this.success += 1;
             this.totalTime += result.responseTime;
         } else {
@@ -51,11 +22,11 @@ export class Stats {
         }
     }
 
-    getAverageTime(): number {
+    getAverageTime() {
         return this.success > 0 ? this.totalTime / this.success : 0;
     }
 
-    getSummary(): StatsSummary {
+    getSummary() {
         return {
             total: this.total,
             success: this.success,
@@ -67,3 +38,5 @@ export class Stats {
         };
     }
 }
+
+module.exports = Stats;
