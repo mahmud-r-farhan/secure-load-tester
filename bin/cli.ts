@@ -1,11 +1,11 @@
-#!/usr/bin/env node
 
-const { program } = require('commander');
-const { runTests } = require('../src/index');
-const fs = require('fs').promises;
+
+import { program } from 'commander';
+import { runTests, Config } from '../src/index';
+import { promises as fs } from 'fs';
 
 program
-    .version('1.2.0')
+    .version('2.0.0')
     .description('Secure Load Tester: A CLI tool for performance and security testing of Node.js APIs')
     .option('-u, --url <url>', 'Target API URL', 'http://localhost:5000/api/test')
     .option('-r, --requests <number>', 'Number of requests', '10')
@@ -24,7 +24,7 @@ program
 const options = program.opts();
 
 async function main() {
-    let config = {
+    let config: Config = {
         targetUrl: options.url,
         maxRequests: parseInt(options.requests, 10),
         delay: parseFloat(options.delay),
@@ -40,10 +40,11 @@ async function main() {
 
     if (options.config) {
         try {
-            const configFile = JSON.parse(await fs.readFile(options.config));
+            const fileContent = await fs.readFile(options.config, 'utf-8');
+            const configFile = JSON.parse(fileContent);
             config = { ...config, ...configFile };
             if (config.method) config.method = config.method.toUpperCase();
-        } catch (error) {
+        } catch (error: any) {
             console.error(`Error loading config file: ${error.message}`);
             process.exit(1);
         }
@@ -51,7 +52,7 @@ async function main() {
 
     try {
         await runTests(config);
-    } catch (error) {
+    } catch (error: any) {
         console.error(`Error: ${error.message}`);
         process.exit(1);
     }

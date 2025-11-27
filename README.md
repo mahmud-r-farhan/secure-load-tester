@@ -12,7 +12,10 @@ A command-line tool for performance and security testing of Node.js APIs. It sup
   - Sensitive data leak detection in responses.
 - **Customizable**: Load custom payloads from a JSON file.
 - **Reporting**: Save results in CSV, JSON, and HTML formats for analysis.
-- **CLI Support**: Easy-to-use command-line interface with configuration file support.
+- **CLI Support**: Easy-to-use command-line interface with configuration file support (including full paths).
+- **HTTP Method Support**: Specify HTTP method (e.g., GET, POST); for non-body methods like GET, payloads are sent as query parameters.
+- **Timeout Configuration**: Set request timeout.
+- **Output Directory**: Specify directory for saving reports.
 
 ## Installation
 Install the package globally or locally via npm:
@@ -43,9 +46,12 @@ secure-load-tester [options]
 - `-s, --session <cookie>`: Session cookie (e.g., `sessionId=abc123`, optional)
 - `-x, --csrf <token>`: CSRF token (optional)
 - `-p, --payloads <file>`: Path to custom payloads JSON file (optional)
-- `-f, --config <file>`: Path to configuration JSON file (optional)
+- `-f, --config <file>`: Path to configuration JSON file (supports full paths, optional)
+- `-m, --method <method>`: HTTP method (e.g., POST, GET, default: POST)
+- `--timeout <ms>`: Request timeout in milliseconds (default: 20000)
+- `-o, --output <dir>`: Output directory for reports (default: current directory)
 
-### Example
+### Examples
 Run a test with default settings:
 
 ```bash
@@ -55,14 +61,21 @@ secure-load-tester
 Run with custom parameters:
 
 ```bash
-secure-load-tester -u http://localhost:3000/api/test -r 20 -c 10 -t your_jwt_token -s sessionId=abc123 -x your_csrf_token
+secure-load-tester -u http://localhost:3000/api/test -r 20 -c 10 -t your_jwt_token -s sessionId=abc123 -x your_csrf_token -m GET --timeout 30000 -o ./reports
 ```
 
-Use a configuration file:
+Use a configuration file (supports full paths):
 
 ```bash
 secure-load-tester -f config.json
 ```
+
+Or with full path:
+
+```bash
+secure-load-tester -f C:\Users\<your-username>\path\config.json
+```
+> Replace `<your-username>` with the username on your machine.
 
 ### Configuration File
 Create a `config.json` file to specify default settings:
@@ -76,7 +89,10 @@ Create a `config.json` file to specify default settings:
     "authToken": "",
     "sessionCookie": "",
     "csrfToken": "",
-    "customPayloadsFile": ""
+    "customPayloadsFile": "",
+    "method": "POST",
+    "timeout": 20000,
+    "outputDir": "."
 }
 ```
 
@@ -99,7 +115,7 @@ secure-load-tester -p payloads.json
 ## Output
 - Real-time progress in the terminal, showing sent requests, successes, errors, and average response time.
 - Detailed test summary with total time, RPS, CSRF failures, session hijacking failures, and JWT failures.
-- Results saved in:
+- Results saved in the specified output directory:
   - CSV file (`security_test_log_<timestamp>.csv`)
   - JSON report (`security_test_report_<timestamp>.json`)
   - HTML report (`security_test_report_<timestamp>.html`)
@@ -110,5 +126,14 @@ secure-load-tester -p payloads.json
 - **JWT Failures**: Low failures (e.g., 401/403 status codes) indicate robust JWT validation.
 - **Sensitive Data Leaks**: Check the `sensitiveLeak` column in the CSV/HTML for potential data exposure.
 - **Performance**: High `429` status codes with high concurrency suggest effective rate limiting.
+
+## Changes in v2.0.0
+- Added support for custom HTTP methods (e.g., GET, where payloads become query params).
+- Added request timeout configuration.
+- Added output directory for reports.
+- Improved handling of response data types and performance metrics (kept as numbers internally).
+- Enhanced JWT manipulation with error handling.
+- Optimized file paths for templates and outputs.
+- Clarified full path support for config files in documentation.
 
 ---

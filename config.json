@@ -1,10 +1,13 @@
 {
-    "targetUrl": "http://localhost:5000/api/test",
-    "maxRequests": 10,
-    "delay": 1,
-    "concurrent": 5,
-    "authToken": "",
-    "sessionCookie": "",
-    "csrfToken": "",
-    "customPayloadsFile": ""
+  "targetUrl": "http://localhost:5000/api/test",
+  "maxRequests": 10,
+  "delay": 1,
+  "concurrent": 5,
+  "authToken": "",
+  "sessionCookie": "",
+  "csrfToken": "",
+  "customPayloadsFile": "",
+  "method": "POST",
+  "timeout": 20000,
+  "outputDir": "."
 }
